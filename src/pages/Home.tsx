@@ -2,10 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import Header from "../components/Header";
 import TrendingCard from "../components/TrendingCard";
 import ForyouCard from "../components/ForyouCard";
+import { useNavigate } from "react-router-dom";
 
-const Home = () => {
+const Home = ({loggedIn}) => {
+const navigate = useNavigate();
+  if (!loggedIn){
+    navigate("/");
+  }
+
   const [data, setData] = useState([]);
   const [filterWord, setFitlerWord] = useState("");
+  const [categoryFilt, setCategoryFilt] = useState(0);
 
   useEffect(() => {
     fetch("http://localhost:3000/movies")
@@ -18,23 +25,37 @@ const Home = () => {
   }, [data]);
 
   const filteredData = useMemo(() => {
-    if (filterWord){
-        return data.filter((item) => {
-            return item.title.toLowerCase().includes(filterWord.toLowerCase())
-        })
-    }else{
-        return data
-    }
-  }, [filterWord, data])
+    return data.filter((item) => {
+      // 1. Text Filter Condition
+      const matchesText = filterWord
+        ? item.title.toLowerCase().includes(filterWord.toLowerCase())
+        : true;
 
-  console.log(data[0]);
+      // 2. Category / Bookmark Filter Condition
+      let matchesCategory = true; // Default to true (covers categoryFilt === 0)
+
+      if (categoryFilt === 1) {
+        matchesCategory = item.category === "Movie";
+      } else if (categoryFilt === 2) {
+        matchesCategory = item.category === "TV Series";
+      } else if (categoryFilt === 3) {
+        matchesCategory = item.isBookmarked === true;
+      }
+
+      // Both conditions must be true
+      return matchesText && matchesCategory;
+    });
+  }, [filterWord, categoryFilt, data]);
+
+  console.log(data);
   return (
     <>
-      <Header />
+      <Header setCategoryFilt={setCategoryFilt} categoryFilt={categoryFilt} />
       <main className="px-4 pt-6.5">
         <label className="flex gap-3 items-center mb-6.5" htmlFor="search">
           <img src="./search.svg" alt="" />
-          <input onChange={(e) => setFitlerWord(e.target.value)}
+          <input
+            onChange={(e) => setFitlerWord(e.target.value)}
             className="w-full outline-0"
             placeholder="Search for movies or TV series"
             type="text"
